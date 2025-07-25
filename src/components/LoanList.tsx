@@ -583,79 +583,81 @@ const LoanList = ({ refreshTrigger }: LoanListProps) => {
       
       yPos += 20;
       
-      // RESUMO DA PROPOSTA - DESTAQUE
+      // RESUMO DA PROPOSTA - DESIGN MODERNO COM GRADIENTE
+      // Simular bordas arredondadas com múltiplos retângulos
       doc.setFillColor(30, 58, 138);
-      doc.rect(15, yPos - 8, pageWidth - 30, 35, 'F');
+      doc.roundedRect(15, yPos - 5, pageWidth - 30, 32, 3, 3, 'F');
       
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.text('RESUMO DA PROPOSTA', pageWidth / 2, yPos + 5, { align: 'center' });
       
-      // Valores principais em destaque
-      doc.setFontSize(11);
+      // Layout em duas colunas mais compacto
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       
-      const jurosResumo = loan.total_amount - loan.loan_amount;
-      const taxaJurosResumo = ((jurosResumo / loan.loan_amount) * 100).toFixed(1);
+      doc.text(`Valor: R$ ${loan.loan_amount.toFixed(2)}`, 25, yPos + 14);
+      doc.text(`Total: R$ ${loan.total_amount.toFixed(2)}`, pageWidth - 80, yPos + 14);
       
-      doc.text(`Valor Emprestado: R$ ${loan.loan_amount.toFixed(2)}`, 25, yPos + 15);
-      doc.text(`Total a Pagar: R$ ${loan.total_amount.toFixed(2)}`, 25, yPos + 22);
-      doc.text(`${loan.total_weeks} parcelas de R$ ${loan.weekly_payment.toFixed(2)}`, pageWidth - 25, yPos + 15, { align: 'right' });
-      doc.text(`Juros: ${taxaJurosResumo}% (R$ ${jurosResumo.toFixed(2)})`, pageWidth - 25, yPos + 22, { align: 'right' });
+      if (loan.next_payment_date) {
+        const primeiraParcela = format(new Date(loan.next_payment_date), 'dd/MM/yyyy');
+        doc.text(`${loan.total_weeks}x R$ ${loan.weekly_payment.toFixed(2)} (inicio ${primeiraParcela})`, pageWidth / 2, yPos + 22, { align: 'center' });
+      } else {
+        doc.text(`${loan.total_weeks} parcelas de R$ ${loan.weekly_payment.toFixed(2)}`, pageWidth / 2, yPos + 22, { align: 'center' });
+      }
       
-      yPos += 45;
+      yPos += 30;
       
-      // SEÇÃO DADOS PESSOAIS
+      // SEÇÃO DADOS PESSOAIS - DESIGN MODERNO
       doc.setFillColor(248, 250, 252);
-      doc.rect(15, yPos - 8, pageWidth - 30, 12, 'F');
+      doc.roundedRect(15, yPos - 5, pageWidth - 30, 8, 2, 2, 'F');
       
-      doc.setFontSize(16);
+      doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(30, 58, 138);
-      doc.text('DADOS PESSOAIS DO CLIENTE', 20, yPos);
+      doc.text('DADOS DO CLIENTE', 20, yPos);
       
-      yPos += 18;
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
+      yPos += 12;
+      doc.setFontSize(9);
       doc.setTextColor(0, 0, 0);
-      
-      // Layout em duas colunas
-      const col1 = 20;
-      const col2 = pageWidth / 2 + 10;
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Nome Completo:', col1, yPos);
       doc.setFont('helvetica', 'normal');
-      doc.text(loan.clients.full_name, col1 + 35, yPos);
+      
+      const col1 = 25;
+      const col2 = 120;
+      
+      // Layout mais compacto em duas colunas
+      doc.setFont('helvetica', 'bold');
+      doc.text('Nome:', col1, yPos);
+      doc.setFont('helvetica', 'normal');
+      doc.text(loan.clients.full_name.substring(0, 25), col1 + 20, yPos);
       
       doc.setFont('helvetica', 'bold');
       doc.text('CPF:', col2, yPos);
       doc.setFont('helvetica', 'normal');
-      doc.text(loan.clients.cpf, col2 + 15, yPos);
+      doc.text(loan.clients.cpf || '000.000.000-00', col2 + 15, yPos);
       
-      yPos += 10;
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Telefone:', col1, yPos);
-      doc.setFont('helvetica', 'normal');
-      doc.text(loan.clients.phone || 'Nao informado', col1 + 25, yPos);
+      yPos += 8;
       
       doc.setFont('helvetica', 'bold');
-      doc.text('Limite de Credito:', col2, yPos);
+      doc.text('Tel:', col1, yPos);
       doc.setFont('helvetica', 'normal');
-      doc.text(`R$ ${loan.clients.credit_limit?.toFixed(2) || '0,00'}`, col2 + 40, yPos);
+      doc.text(loan.clients.phone || '(00) 00000-0000', col1 + 15, yPos);
       
-      yPos += 10;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Limite:', col2, yPos);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`R$ ${loan.clients.credit_limit?.toFixed(2) || '0,00'}`, col2 + 20, yPos);
+      
+      yPos += 8;
       
       if (loan.clients.address && typeof loan.clients.address === 'string') {
         doc.setFont('helvetica', 'bold');
-        doc.text('Endereco:', col1, yPos);
+        doc.text('End:', col1, yPos);
         doc.setFont('helvetica', 'normal');
-        // Quebrar texto longo em múltiplas linhas se necessário
-        const endereco = loan.clients.address.substring(0, 60); // Limitar tamanho
-        doc.text(endereco, col1 + 25, yPos);
-        yPos += 10;
+        const endereco = loan.clients.address.substring(0, 50);
+        doc.text(endereco, col1 + 15, yPos);
+        yPos += 8;
       }
       
       // Espaço adicional se houver endereço
@@ -665,168 +667,100 @@ const LoanList = ({ refreshTrigger }: LoanListProps) => {
       
       yPos += 15;
       
-      // SEÇÃO DETALHES FINANCEIROS
+      // CRONOGRAMA MODERNO E COMPACTO
       doc.setFillColor(248, 250, 252);
-      doc.rect(15, yPos - 8, pageWidth - 30, 12, 'F');
+      doc.roundedRect(15, yPos - 5, pageWidth - 30, 8, 2, 2, 'F');
       
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(30, 58, 138);
-      doc.text('DETALHES DO EMPRESTIMO', 20, yPos);
-      
-      yPos += 18;
       doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
-      
-      // Valores principais em destaque
-      doc.setFont('helvetica', 'bold');
-      doc.text('Valor Solicitado:', col1, yPos);
-      doc.setTextColor(22, 163, 74); // Verde
-      doc.setFontSize(14);
-      doc.text(`R$ ${loan.loan_amount.toFixed(2)}`, col1 + 45, yPos);
-      
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(12);
-      doc.text('Valor Total a Pagar:', col2, yPos);
-      doc.setTextColor(220, 38, 127); // Rosa/Vermelho
-      doc.setFontSize(14);
-      doc.text(`R$ ${loan.total_amount.toFixed(2)}`, col2 + 50, yPos);
-      
-      yPos += 15;
-      
-      // Detalhes do financiamento
-      const juros = loan.total_amount - loan.loan_amount;
-      const taxaJuros = ((juros / loan.loan_amount) * 100).toFixed(1);
-      
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
-      
-      doc.text(`Juros Total: R$ ${juros.toFixed(2)} (${taxaJuros}%)`, col1, yPos);
-      doc.text(`Numero de Parcelas: ${loan.total_weeks} semanas`, col2, yPos);
-      
-      yPos += 10;
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Valor da Parcela Semanal:', col1, yPos);
-      doc.setTextColor(59, 130, 246); // Azul
-      doc.setFontSize(13);
-      doc.text(`R$ ${loan.weekly_payment.toFixed(2)}`, col1 + 60, yPos);
-      
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Data do Emprestimo: ${format(new Date(loan.loan_date), 'dd/MM/yyyy')}`, col2, yPos);
-      
-      yPos += 10;
-      
-      if (loan.next_payment_date) {
-        doc.text(`Primeira Parcela: ${format(new Date(loan.next_payment_date), 'dd/MM/yyyy')}`, col1, yPos);
-      }
-      
-      yPos += 25;
-      
-      // CRONOGRAMA MODERNO
-      doc.setFillColor(248, 250, 252);
-      doc.rect(15, yPos - 8, pageWidth - 30, 12, 'F');
-      
-      doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(30, 58, 138);
       doc.text('CRONOGRAMA DE PAGAMENTOS', 20, yPos);
       
-      yPos += 18;
+      yPos += 12;
       
-      // Cabeçalho da tabela moderno
+      // Cabeçalho da tabela mais compacto
       doc.setFillColor(30, 58, 138);
-      doc.rect(20, yPos - 6, pageWidth - 40, 12, 'F');
+      doc.roundedRect(20, yPos - 4, pageWidth - 40, 10, 2, 2, 'F');
       
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(11);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('Parcela', 25, yPos);
-      doc.text('Data Vencimento', 70, yPos);
-      doc.text('Valor (R$)', 130, yPos);
-      doc.text('Status', 165, yPos);
+      doc.text('#', 25, yPos);
+      doc.text('Vencimento', 45, yPos);
+      doc.text('Valor', 100, yPos);
+      doc.text('Status', 140, yPos);
       
-      yPos += 15;
+      yPos += 10;
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
+      doc.setFontSize(8);
       
-      // Cronograma compacto e organizado
-      const alturaLinha = 8; // Altura menor para mais parcelas
-      const maxParcelasPorPagina = Math.floor((pageHeight - yPos - 60) / alturaLinha);
-      let parcelasProcessadas = 0;
+      // Cronograma ultra compacto para caber em uma página
+      const alturaLinha = 6; // Altura muito menor
+      const maxParcelas = Math.min(loan.total_weeks, 20); // Máximo 20 parcelas para garantir uma página
       
-      for (let i = 0; i < loan.total_weeks; i++) {
+      for (let i = 0; i < maxParcelas; i++) {
         const isPaid = i < loan.weeks_paid;
         const parcela = i + 1;
         
         if (loan.next_payment_date) {
-          // Verificar se precisa de nova página (deixar espaço para rodapé)
-          if (parcelasProcessadas > 0 && parcelasProcessadas % maxParcelasPorPagina === 0) {
-            doc.addPage();
-            yPos = 30;
-            
-            // Cabeçalho da nova página
-            doc.setFillColor(30, 58, 138);
-            doc.rect(20, yPos - 6, pageWidth - 40, 12, 'F');
-            
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Parcela', 25, yPos);
-            doc.text('Vencimento', 70, yPos);
-            doc.text('Valor', 130, yPos);
-            doc.text('Status', 165, yPos);
-            
-            yPos += 12;
-          }
-          
           const dataVencimento = addWeeks(new Date(loan.next_payment_date), i - loan.weeks_paid);
           
-          // Fundo alternado para melhor leitura
+          // Fundo alternado com bordas arredondadas
           if (i % 2 === 0) {
             doc.setFillColor(248, 250, 252);
-            doc.rect(20, yPos - 3, pageWidth - 40, alturaLinha, 'F');
+            doc.roundedRect(20, yPos - 2, pageWidth - 40, alturaLinha, 1, 1, 'F');
           }
           
-          // Dados da parcela
+          // Dados da parcela - layout compacto
           doc.setTextColor(0, 0, 0);
-          doc.setFontSize(9);
+          doc.setFontSize(8);
           doc.setFont('helvetica', 'normal');
           
-          doc.text(`${parcela}ª`, 25, yPos);
-          doc.text(format(dataVencimento, 'dd/MM/yyyy'), 70, yPos);
-          doc.text(`R$ ${loan.weekly_payment.toFixed(2)}`, 130, yPos);
+          doc.text(`${parcela}`, 25, yPos);
+          doc.text(format(dataVencimento, 'dd/MM'), 45, yPos);
+          doc.text(`${loan.weekly_payment.toFixed(0)}`, 100, yPos);
           
-          // Status com cores
+          // Status com ícones
           if (isPaid) {
             doc.setTextColor(22, 163, 74);
             doc.setFont('helvetica', 'bold');
-            doc.text('PAGO', 165, yPos);
+            doc.text('✓ PAGO', 140, yPos);
           } else {
             doc.setTextColor(239, 68, 68);
             doc.setFont('helvetica', 'normal');
-            doc.text('PENDENTE', 165, yPos);
+            doc.text('• PENDENTE', 140, yPos);
           }
           
           yPos += alturaLinha;
-          parcelasProcessadas++;
         }
       }
       
-      // RODAPÉ MODERNO
-      yPos = pageHeight - 30;
+      // Se houver mais parcelas, mostrar resumo
+      if (loan.total_weeks > maxParcelas) {
+        yPos += 5;
+        doc.setTextColor(107, 114, 128);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        doc.text(`+ ${loan.total_weeks - maxParcelas} parcelas restantes...`, 25, yPos);
+        yPos += 10;
+      }
+      
+      // RODAPÉ MODERNO COM BORDAS ARREDONDADAS
+      yPos = pageHeight - 25;
+      
       doc.setFillColor(248, 250, 252);
-      doc.rect(0, yPos - 5, pageWidth, 35, 'F');
+      doc.roundedRect(15, yPos - 3, pageWidth - 30, 15, 2, 2, 'F');
       
       doc.setTextColor(107, 114, 128);
-      doc.setFontSize(9);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
-      doc.text('Este documento foi gerado automaticamente pelo sistema FinCerta', pageWidth / 2, yPos + 5, { align: 'center' });
-      doc.text(`Gerado em ${dataAtual} as ${new Date().toLocaleTimeString('pt-BR')}`, pageWidth / 2, yPos + 15, { align: 'center' });
+      
+      const agora = new Date();
+      const timestamp = format(agora, "dd/MM/yyyy 'as' HH:mm");
+      
+      doc.text(`Documento gerado pelo FinCerta em ${timestamp}`, pageWidth / 2, yPos + 5, { align: 'center' });
+      doc.text(`Sistema de Gestao de Credito`, pageWidth / 2, yPos + 10, { align: 'center' });
       
       // Nome do arquivo
       const nomeSimples = loan.clients.full_name
@@ -834,7 +768,8 @@ const LoanList = ({ refreshTrigger }: LoanListProps) => {
         .replace(/\s+/g, '_')
         .toLowerCase();
       
-      const nomeArquivo = `proposta_${nomeSimples}_${dataAtual.replace(/\//g, '-')}.pdf`;
+      const dataArquivo = format(agora, 'yyyy-MM-dd');
+      const nomeArquivo = `proposta_${nomeSimples}_${dataArquivo}.pdf`;
       
       // Salvar
       doc.save(nomeArquivo);
