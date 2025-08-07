@@ -1,342 +1,264 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { activityLogger, ActivityLog } from '@/utils/activityLogger';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { 
   Activity, 
   Search, 
-  Filter, 
-  Download,
   RefreshCw,
   User,
   DollarSign,
-  FileText,
-  Trash2,
-  Plus
-} from "lucide-react";
-
-interface ActivityLog {
-  id: string;
-  action: string;
-  description: string;
-  user_name: string;
-  created_at: string;
-  metadata?: any;
-}
+  LogIn,
+  CreditCard,
+  AlertTriangle,
+  CheckCircle,
+  Settings,
+  Trash2
+} from 'lucide-react';
 
 const ActivityLogs = () => {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<ActivityLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [actionFilter, setActionFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
-  const { user } = useAuth();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [userFilter, setUserFilter] = useState<string>('all');
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
-  // Simular logs baseados nas atividades do sistema
-  const generateSystemLogs = () => {
-    const mockLogs: ActivityLog[] = [
-      {
-        id: "1",
-        action: "LOGIN",
-        description: "Usuário fez login no sistema",
-        user_name: user?.email || "Sistema",
-        created_at: new Date().toISOString(),
-        metadata: { ip: "192.168.1.1" }
-      },
-      {
-        id: "2", 
-        action: "CREATE_CLIENT",
-        description: "Novo cliente cadastrado: João Silva",
-        user_name: user?.email || "Sistema",
-        created_at: new Date(Date.now() - 3600000).toISOString(),
-        metadata: { client_name: "João Silva", cpf: "123.456.789-00" }
-      },
-      {
-        id: "3",
-        action: "CREATE_LOAN", 
-        description: "Empréstimo aprovado: R$ 700,00 para João Silva",
-        user_name: user?.email || "Sistema",
-        created_at: new Date(Date.now() - 7200000).toISOString(),
-        metadata: { loan_amount: 700, client_name: "João Silva" }
-      },
-      {
-        id: "4",
-        action: "PAYMENT_RECEIVED",
-        description: "Pagamento recebido: R$ 325,00 - João Silva",
-        user_name: user?.email || "Sistema", 
-        created_at: new Date(Date.now() - 10800000).toISOString(),
-        metadata: { payment_amount: 325, client_name: "João Silva" }
-      },
-      {
-        id: "5",
-        action: "PDF_GENERATED",
-        description: "PDF da proposta gerado para João Silva",
-        user_name: user?.email || "Sistema",
-        created_at: new Date(Date.now() - 14400000).toISOString(),
-        metadata: { client_name: "João Silva", document_type: "loan_proposal" }
-      }
-    ];
-
-    return mockLogs;
+  // Carregar logs do sistema real
+  const loadSystemLogs = () => {
+    const allLogs = activityLogger.getLogs({ limit: 200 });
+    setLogs(allLogs);
+    console.log(`📊 ${allLogs.length} logs carregados para visualização`);
   };
 
-  useEffect(() => {
-    const loadLogs = () => {
-      setLoading(true);
-      // Como não temos tabela de logs real, vamos simular
-      const systemLogs = generateSystemLogs();
-      setLogs(systemLogs);
-      setFilteredLogs(systemLogs);
-      setLoading(false);
-    };
-
-    loadLogs();
-  }, [user]);
-
   // Filtrar logs
-  useEffect(() => {
-    let filtered = logs;
+  const filterLogs = () => {
+    let filtered = [...logs];
 
-    // Filtro por termo de busca
+    // Filtro por texto
     if (searchTerm) {
       filtered = filtered.filter(log => 
-        log.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.user_name.toLowerCase().includes(searchTerm.toLowerCase())
+        log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        log.details.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        log.user.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    // Filtro por ação
-    if (actionFilter !== "all") {
-      filtered = filtered.filter(log => log.action === actionFilter);
+    // Filtro por tipo
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(log => log.type === typeFilter);
     }
 
-    // Filtro por data
-    if (dateFilter !== "all") {
-      const now = new Date();
-      const filterDate = new Date();
-      
-      switch (dateFilter) {
-        case "today":
-          filterDate.setHours(0, 0, 0, 0);
-          filtered = filtered.filter(log => new Date(log.created_at) >= filterDate);
-          break;
-        case "week":
-          filterDate.setDate(now.getDate() - 7);
-          filtered = filtered.filter(log => new Date(log.created_at) >= filterDate);
-          break;
-        case "month":
-          filterDate.setMonth(now.getMonth() - 1);
-          filtered = filtered.filter(log => new Date(log.created_at) >= filterDate);
-          break;
-      }
+    // Filtro por usuário
+    if (userFilter !== 'all') {
+      filtered = filtered.filter(log => log.user === userFilter);
     }
 
     setFilteredLogs(filtered);
-  }, [logs, searchTerm, actionFilter, dateFilter]);
+  };
 
-  const getActionIcon = (action: string) => {
-    switch (action) {
-      case "LOGIN":
-        return <User className="w-4 h-4" />;
-      case "CREATE_CLIENT":
-        return <Plus className="w-4 h-4" />;
-      case "CREATE_LOAN":
-        return <DollarSign className="w-4 h-4" />;
-      case "PAYMENT_RECEIVED":
-        return <DollarSign className="w-4 h-4" />;
-      case "PDF_GENERATED":
-        return <FileText className="w-4 h-4" />;
-      case "DELETE_LOAN":
-        return <Trash2 className="w-4 h-4" />;
-      default:
-        return <Activity className="w-4 h-4" />;
+  // Obter ícone por tipo de log
+  const getLogIcon = (type: ActivityLog['type']) => {
+    switch (type) {
+      case 'login': return <LogIn className="w-4 h-4" />;
+      case 'payment': return <CreditCard className="w-4 h-4" />;
+      case 'create': return <CheckCircle className="w-4 h-4" />;
+      case 'update': return <Settings className="w-4 h-4" />;
+      case 'delete': return <Trash2 className="w-4 h-4" />;
+      case 'system': return <Activity className="w-4 h-4" />;
+      default: return <Activity className="w-4 h-4" />;
     }
   };
 
-  const getActionBadge = (action: string) => {
-    switch (action) {
-      case "LOGIN":
-        return <Badge variant="secondary">Login</Badge>;
-      case "CREATE_CLIENT":
-        return <Badge variant="default">Cliente</Badge>;
-      case "CREATE_LOAN":
-        return <Badge variant="default">Empréstimo</Badge>;
-      case "PAYMENT_RECEIVED":
-        return <Badge variant="secondary">Pagamento</Badge>;
-      case "PDF_GENERATED":
-        return <Badge variant="outline">PDF</Badge>;
-      case "DELETE_LOAN":
-        return <Badge variant="destructive">Exclusão</Badge>;
-      default:
-        return <Badge variant="outline">{action}</Badge>;
+  // Obter cor da badge por tipo
+  const getBadgeVariant = (type: ActivityLog['type']) => {
+    switch (type) {
+      case 'login': return 'default';
+      case 'payment': return 'default';
+      case 'create': return 'default';
+      case 'update': return 'secondary';
+      case 'delete': return 'destructive';
+      case 'system': return 'outline';
+      default: return 'outline';
     }
   };
 
-  const exportLogs = () => {
-    const csvContent = [
-      ["Data/Hora", "Ação", "Descrição", "Usuário"],
-      ...filteredLogs.map(log => [
-        format(new Date(log.created_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR }),
-        log.action,
-        log.description,
-        log.user_name
-      ])
-    ].map(row => row.join(",")).join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `logs_${format(new Date(), "yyyy-MM-dd", { locale: ptBR })}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // Obter usuários únicos para filtro
+  const getUniqueUsers = () => {
+    const users = [...new Set(logs.map(log => log.user))];
+    return users.filter(user => user !== 'Sistema');
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <RefreshCw className="w-6 h-6 animate-spin mr-2" />
-        Carregando logs...
-      </div>
-    );
-  }
+  // Efeitos
+  useEffect(() => {
+    loadSystemLogs();
+  }, []);
+
+  useEffect(() => {
+    filterLogs();
+  }, [logs, searchTerm, typeFilter, userFilter]);
+
+  useEffect(() => {
+    if (autoRefresh) {
+      const interval = setInterval(loadSystemLogs, 5000); // Atualizar a cada 5 segundos
+      return () => clearInterval(interval);
+    }
+  }, [autoRefresh]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <Activity className="w-5 h-5" />
-          <h2 className="text-xl font-semibold">Logs de Atividade</h2>
-        </div>
-        <Button onClick={exportLogs} variant="outline" size="sm">
-          <Download className="w-4 h-4 mr-2" />
-          Exportar CSV
-        </Button>
-      </div>
-
-      {/* Filtros */}
+    <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Filtros</CardTitle>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="w-5 h-5" />
+                Logs de Atividade
+              </CardTitle>
+              <CardDescription>
+                Acompanhe todas as atividades do sistema em tempo real
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={autoRefresh ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setAutoRefresh(!autoRefresh)}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${autoRefresh ? 'animate-spin' : ''}`} />
+                Auto Refresh
+              </Button>
+              <Button variant="outline" size="sm" onClick={loadSystemLogs}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Atualizar
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Buscar</label>
+          {/* Filtros */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex-1">
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Buscar por descrição ou usuário..."
+                  placeholder="Buscar logs..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
             </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Ação</label>
-              <Select value={actionFilter} onValueChange={setActionFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todas as ações" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as ações</SelectItem>
-                  <SelectItem value="LOGIN">Login</SelectItem>
-                  <SelectItem value="CREATE_CLIENT">Criar Cliente</SelectItem>
-                  <SelectItem value="CREATE_LOAN">Criar Empréstimo</SelectItem>
-                  <SelectItem value="PAYMENT_RECEIVED">Pagamento</SelectItem>
-                  <SelectItem value="PDF_GENERATED">PDF Gerado</SelectItem>
-                  <SelectItem value="DELETE_LOAN">Exclusão</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Período</label>
-              <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos os períodos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os períodos</SelectItem>
-                  <SelectItem value="today">Hoje</SelectItem>
-                  <SelectItem value="week">Última semana</SelectItem>
-                  <SelectItem value="month">Último mês</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Filtrar por tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+                <SelectItem value="login">Login</SelectItem>
+                <SelectItem value="payment">Pagamentos</SelectItem>
+                <SelectItem value="create">Criações</SelectItem>
+                <SelectItem value="update">Atualizações</SelectItem>
+                <SelectItem value="delete">Exclusões</SelectItem>
+                <SelectItem value="system">Sistema</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={userFilter} onValueChange={setUserFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Filtrar por usuário" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os usuários</SelectItem>
+                {getUniqueUsers().map(user => (
+                  <SelectItem key={user} value={user}>{user}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Lista de Logs */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            Atividades Recentes ({filteredLogs.length})
-          </CardTitle>
-          <CardDescription>
-            Histórico de ações realizadas no sistema
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {filteredLogs.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>Nenhuma atividade encontrada</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredLogs.map((log) => (
-                <div
-                  key={log.id}
-                  className="flex items-start gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex-shrink-0 mt-1">
-                    {getActionIcon(log.action)}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      {getActionBadge(log.action)}
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(log.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      </span>
-                    </div>
-                    
-                    <p className="text-sm font-medium text-foreground mb-1">
-                      {log.description}
-                    </p>
-                    
-                    <p className="text-xs text-muted-foreground">
-                      Por: {log.user_name}
-                    </p>
-                    
-                    {log.metadata && Object.keys(log.metadata).length > 0 && (
-                      <details className="mt-2">
-                        <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
-                          Ver detalhes
-                        </summary>
-                        <pre className="text-xs bg-muted p-2 rounded mt-1 overflow-x-auto">
-                          {JSON.stringify(log.metadata, null, 2)}
-                        </pre>
-                      </details>
-                    )}
-                  </div>
+          {/* Estatísticas */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold">{logs.length}</div>
+                <div className="text-sm text-gray-600">Total de Logs</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold">{filteredLogs.length}</div>
+                <div className="text-sm text-gray-600">Logs Filtrados</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold">{getUniqueUsers().length}</div>
+                <div className="text-sm text-gray-600">Usuários Ativos</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold">
+                  {logs.filter(log => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return new Date(log.timestamp) >= today;
+                  }).length}
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="text-sm text-gray-600">Logs Hoje</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Lista de Logs */}
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {filteredLogs.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Nenhum log encontrado</p>
+              </div>
+            ) : (
+              filteredLogs.map((log) => (
+                <Card key={log.id} className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-1">
+                        {getLogIcon(log.type)}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant={getBadgeVariant(log.type)} className="text-xs">
+                            {log.type.toUpperCase()}
+                          </Badge>
+                          <span className="font-medium">{log.action}</span>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">{log.details}</p>
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <User className="w-3 h-3" />
+                            {log.user}
+                          </div>
+                          <div>
+                            {format(new Date(log.timestamp), 'dd/MM/yyyy HH:mm:ss', { locale: ptBR })}
+                          </div>
+                          {log.entity && (
+                            <div>
+                              {log.entity} {log.entityId && `(${log.entityId})`}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

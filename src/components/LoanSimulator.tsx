@@ -310,6 +310,140 @@ const LoanSimulator = ({ onLoanCreated, onBack }: LoanSimulatorProps) => {
     }
   };
 
+  // Gerar PDF da proposta simulada (antes de aprovar)
+  const generateProposalPDF = () => {
+    if (!loanDetails || !selectedClient) return null;
+
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      const margin = 20;
+      let yPosition = 40;
+
+      // Cabeçalho
+      doc.setFontSize(22);
+      doc.setFont(undefined, 'bold');
+      doc.text('PROPOSTA DE EMPRÉSTIMO', pageWidth / 2, yPosition, { align: 'center' });
+      
+      yPosition += 15;
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'normal');
+      doc.text('(Proposta Preliminar - Sujeita a Aprovação)', pageWidth / 2, yPosition, { align: 'center' });
+      
+      yPosition += 20;
+      doc.text(`Data: ${format(new Date(), 'dd/MM/yyyy', { locale: ptBR })}`, margin, yPosition);
+      
+      yPosition += 30;
+      
+      // Dados do Cliente
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text('DADOS DO CLIENTE', margin, yPosition);
+      yPosition += 15;
+      
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Nome: ${selectedClient.full_name}`, margin, yPosition);
+      yPosition += 10;
+      doc.text(`CPF: ${selectedClient.cpf}`, margin, yPosition);
+      yPosition += 10;
+      doc.text(`Limite de Crédito: R$ ${selectedClient.credit_limit.toFixed(2)}`, margin, yPosition);
+      yPosition += 10;
+      doc.text(`Crédito Disponível: R$ ${selectedClient.available_credit.toFixed(2)}`, margin, yPosition);
+      
+      yPosition += 30;
+      
+      // Condições da Proposta
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text('CONDIÇÕES DA PROPOSTA', margin, yPosition);
+      yPosition += 15;
+      
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Valor a Receber: R$ ${loanDetails.loanAmount.toFixed(2)}`, margin, yPosition);
+      yPosition += 12;
+      doc.text(`Valor Total a Pagar: R$ ${loanDetails.totalAmount.toFixed(2)}`, margin, yPosition);
+      yPosition += 12;
+      doc.text(`Parcelas: ${loanDetails.weeks}x de R$ ${loanDetails.weeklyPayment.toFixed(2)} (semanais)`, margin, yPosition);
+      yPosition += 12;
+      doc.text(`Juros: R$ ${loanDetails.jurosValor.toFixed(2)}`, margin, yPosition);
+      yPosition += 12;
+      doc.text(`Data de Início dos Pagamentos: ${loanDetails.nextPaymentDate}`, margin, yPosition);
+      
+      yPosition += 30;
+      
+      // Cronograma de Pagamentos
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text('CRONOGRAMA DE PAGAMENTOS', margin, yPosition);
+      yPosition += 15;
+      
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      
+      // Cabeçalho da tabela
+      doc.text('Semana', margin, yPosition);
+      doc.text('Data', margin + 30, yPosition);
+      doc.text('Valor', margin + 80, yPosition);
+      yPosition += 8;
+      
+      // Linha separadora
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 5;
+      
+      // Dados da tabela
+      loanDetails.paymentSchedule.forEach((payment) => {
+        doc.text(payment.week.toString(), margin, yPosition);
+        doc.text(payment.date, margin + 30, yPosition);
+        doc.text(`R$ ${payment.amount.toFixed(2)}`, margin + 80, yPosition);
+        yPosition += 8;
+      });
+      
+      yPosition += 20;
+      
+      // Condições Especiais
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('CONDIÇÕES ESPECIAIS:', margin, yPosition);
+      yPosition += 10;
+      
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text('- Pagamento semanal, sempre no mesmo dia da semana', margin, yPosition);
+      yPosition += 8;
+      doc.text('- Possibilidade de quitação antecipada com desconto', margin, yPosition);
+      yPosition += 8;
+      doc.text('- Atendimento personalizado via WhatsApp', margin, yPosition);
+      
+      yPosition += 30;
+      
+      // Observações
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'italic');
+      doc.text('IMPORTANTE: Esta é uma proposta preliminar e está sujeita à aprovação final.', margin, yPosition);
+      yPosition += 8;
+      doc.text('Os valores e condições podem sofrer alterações durante a análise.', margin, yPosition);
+      
+      yPosition += 40;
+      
+      // Assinatura
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'normal');
+      doc.text('_'.repeat(50), margin, yPosition);
+      yPosition += 8;
+      doc.text('Assinatura do Cliente', margin, yPosition);
+      
+      doc.text('_'.repeat(50), pageWidth - margin - 120, yPosition - 8);
+      doc.text('FinCerta - Soluções Financeiras', pageWidth - margin - 120, yPosition);
+      
+      return doc;
+    } catch (error) {
+      console.error('Erro ao gerar PDF da proposta:', error);
+      return null;
+    }
+  };
+
   // Gerar PDF da proposta (simplificado)
   const generateLoanPDF = () => {
     if (!createdLoan) return null;
@@ -362,7 +496,7 @@ const LoanSimulator = ({ onLoanCreated, onBack }: LoanSimulatorProps) => {
     yPosition += 12;
     doc.text(`Parcelas: ${createdLoan.weeks}x de R$ ${createdLoan.weeklyPayment.toFixed(2)} (semanais)`, margin, yPosition);
     yPosition += 12;
-    doc.text(`Juros: R$ ${createdLoan.jurosValor.toFixed(2)} (${createdLoan.interestRate.toFixed(1)}%)`, margin, yPosition);
+    doc.text(`Juros: R$ ${createdLoan.jurosValor.toFixed(2)}`, margin, yPosition);
     
     yPosition += 30;
     
@@ -396,6 +530,48 @@ const LoanSimulator = ({ onLoanCreated, onBack }: LoanSimulatorProps) => {
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
       return null;
+    }
+  };
+
+  // Baixar PDF da proposta simulada
+  const handleDownloadProposalPDF = () => {
+    try {
+      const doc = generateProposalPDF();
+      if (!doc || !loanDetails || !selectedClient) {
+        toast({
+          title: "Erro ao gerar PDF",
+          description: "Não foi possível gerar o PDF da proposta.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Gerar nome do arquivo limpo e padronizado
+      const clientName = selectedClient.full_name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+        .replace(/[^a-zA-Z0-9\s]/g, '') // Remove caracteres especiais
+        .replace(/\s+/g, '_') // Substitui espaços por underscore
+        .toLowerCase(); // Converte para minúsculo
+      
+      const today = new Date();
+      const dateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      const fileName = `proposta_simulacao_${clientName}_${dateStr}.pdf`;
+      
+      doc.save(fileName);
+      
+      toast({
+        title: "PDF da proposta baixado!",
+        description: `Arquivo baixado: ${fileName}`,
+      });
+    } catch (error) {
+      console.error('Erro ao baixar PDF da proposta:', error);
+      toast({
+        title: "Erro ao baixar PDF",
+        description: "Ocorreu um erro ao tentar baixar o arquivo PDF.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -742,7 +918,7 @@ const LoanSimulator = ({ onLoanCreated, onBack }: LoanSimulatorProps) => {
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
                         <p className="text-sm"><strong>Valor solicitado:</strong> R$ {loanDetails.loanAmount.toFixed(2)}</p>
-                        <p className="text-sm"><strong>Juros:</strong> R$ {loanDetails.jurosValor.toFixed(2)} ({loanDetails.interestRate.toFixed(1)}%)</p>
+                        <p className="text-sm"><strong>Juros:</strong> R$ {loanDetails.jurosValor.toFixed(2)}</p>
                         <p className="text-sm"><strong>Valor total:</strong> R$ {loanDetails.totalAmount.toFixed(2)}</p>
                       </div>
                       <div>
@@ -777,14 +953,28 @@ const LoanSimulator = ({ onLoanCreated, onBack }: LoanSimulatorProps) => {
                 </Card>
               )}
 
-              {/* Botão de Aprovação */}
-              <Button 
-                onClick={handleLoanCreation} 
-                className="w-full" 
-                disabled={loading || !loanDetails || loanDetails.loanAmount <= 0 || loanDetails.loanAmount > selectedClient.available_credit || totalAmount <= loanAmount}
-              >
-                {loading ? "Processando..." : "Aprovar Empréstimo"}
-              </Button>
+              {/* Botões de Ação */}
+              {loanDetails && (
+                <div className="space-y-3">
+                  <Button 
+                    onClick={handleDownloadProposalPDF}
+                    variant="outline"
+                    className="w-full"
+                    disabled={!loanDetails || loanDetails.loanAmount <= 0 || loanDetails.loanAmount > selectedClient.available_credit || totalAmount <= loanAmount}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Baixar Proposta (PDF)
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleCreateLoan} 
+                    className="w-full" 
+                    disabled={loading || !loanDetails || loanDetails.loanAmount <= 0 || loanDetails.loanAmount > selectedClient.available_credit || totalAmount <= loanAmount}
+                  >
+                    {loading ? "Processando..." : "Aprovar Empréstimo"}
+                  </Button>
+                </div>
+              )}
               
               {loanDetails && loanDetails.loanAmount > selectedClient.available_credit && (
                 <p className="text-sm text-red-600 text-center mt-2">

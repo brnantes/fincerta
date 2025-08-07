@@ -1,97 +1,62 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { User, Lock, Building2 } from "lucide-react";
+import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { User, Lock, Building2 } from 'lucide-react';
 
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { activityLogger } from "@/utils/activityLogger";
+interface LoginProps {
+  onLogin: (username: string) => void;
+}
 
-const Auth = () => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  
+const Login: React.FC<LoginProps> = ({ onLogin }) => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Usuários válidos com logs detalhados
+  // Usuários válidos
   const validUsers = {
-    'paulo': { password: 'fincerta123', name: 'Paulo', id: 'paulo_001' },
-    'vitor': { password: 'fincerta123', name: 'Vitor', id: 'vitor_002' }
+    'paulo': { password: 'fincerta123', name: 'Paulo' },
+    'vitor': { password: 'fincerta123', name: 'Vitor' }
   };
 
-  useEffect(() => {
-    // Log de inicialização da tela de login
-    activityLogger.logSystemAction('Tela de login carregada', 'Sistema de autenticação inicializado');
-    console.log('🚀 Sistema FinCerta - Tela de Login Carregada');
-    console.log('👥 Usuários disponíveis: Paulo, Vitor');
-    console.log('🔑 Senha padrão: fincerta123');
-  }, []);
-
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    // Log da tentativa de login
-    console.log(`🔐 Tentativa de login para usuário: ${username}`);
-    activityLogger.logSystemAction('Tentativa de login', `Usuário tentando fazer login: ${username}`);
 
     try {
       const user = validUsers[username.toLowerCase() as keyof typeof validUsers];
       
-      if (!user) {
-        console.log(`❌ Usuário não encontrado: ${username}`);
-        activityLogger.logSystemAction('Login falhou', `Usuário não encontrado: ${username}`);
-        throw new Error('Usuário não encontrado');
+      if (!user || password !== user.password) {
+        toast({
+          title: "Erro de Login",
+          description: "Usuário ou senha incorretos",
+          variant: "destructive",
+        });
+        return;
       }
 
-      if (password !== user.password) {
-        console.log(`❌ Senha incorreta para usuário: ${username}`);
-        activityLogger.logSystemAction('Login falhou', `Senha incorreta para usuário: ${username}`);
-        throw new Error('Senha incorreta');
-      }
-
-      // Login bem-sucedido - configurar logger e navegar
-      console.log(`✅ Login bem-sucedido para: ${user.name}`);
-      activityLogger.setCurrentUser(user.name);
-      activityLogger.logSystemAction('Login realizado', `${user.name} acessou o sistema com sucesso`);
+      // Log da ação de login
+      console.log(`[LOGIN] Usuário ${user.name} fez login às ${new Date().toLocaleString()}`);
       
-      // Simular sessão do Supabase para manter compatibilidade
-      localStorage.setItem('fincerta_user', JSON.stringify({
-        id: user.id,
-        name: user.name,
-        username: username.toLowerCase(),
-        loginTime: new Date().toISOString()
-      }));
-
       toast({
         title: "Login realizado com sucesso!",
-        description: `Bem-vindo, ${user.name}! Sistema carregado.`,
+        description: `Bem-vindo, ${user.name}!`,
       });
 
-      // Navegar para o dashboard
-      navigate("/");
-      
-    } catch (error: any) {
-      console.log(`🚫 Erro no login: ${error.message}`);
+      onLogin(user.name);
+    } catch (error) {
       toast({
-        title: "Erro no login",
-        description: error.message === 'Usuário não encontrado' ? 
-          'Usuário não encontrado. Use: paulo ou vitor' :
-          error.message === 'Senha incorreta' ?
-          'Senha incorreta. Use: fincerta123' :
-          'Erro no sistema. Tente novamente.',
+        title: "Erro no sistema",
+        description: "Tente novamente em alguns instantes",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -108,7 +73,7 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSignIn} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username" className="text-sm font-medium">
                 Usuário
@@ -173,4 +138,4 @@ const Auth = () => {
   );
 };
 
-export default Auth;
+export default Login;

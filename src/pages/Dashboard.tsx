@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlusCircle, Users, DollarSign, FileText, LogOut } from "lucide-react";
+import { PlusCircle, Users, DollarSign, FileText, LogOut, Wallet } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import ClientList from "@/components/ClientList";
@@ -14,6 +14,9 @@ import LoanDetails from "@/components/LoanDetails";
 import LoanPayments from "@/components/LoanPayments";
 import UpcomingPayments from "@/components/UpcomingPayments";
 import ActivityLogs from "@/components/ActivityLogs";
+import CashFlow from "@/components/CashFlow";
+import Reports from "@/components/Reports";
+
 
 const Dashboard = () => {
   const { signOut, user } = useAuth();
@@ -87,10 +90,11 @@ const Dashboard = () => {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="clients">Clientes</TabsTrigger>
             <TabsTrigger value="loans">Empréstimos</TabsTrigger>
+            <TabsTrigger value="cashflow">Caixa</TabsTrigger>
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
             <TabsTrigger value="logs">Logs</TabsTrigger>
           </TabsList>
@@ -152,6 +156,14 @@ const Dashboard = () => {
                   >
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Simular Empréstimo
+                  </Button>
+                  <Button 
+                    onClick={() => setActiveTab("cashflow")} 
+                    variant="outline" 
+                    className="w-full justify-start"
+                  >
+                    <Wallet className="mr-2 h-4 w-4" />
+                    Ver Caixa
                   </Button>
                 </CardContent>
               </Card>
@@ -245,18 +257,12 @@ const Dashboard = () => {
             </div>
           </TabsContent>
 
+          <TabsContent value="cashflow">
+            <CashFlow />
+          </TabsContent>
+
           <TabsContent value="reports">
-            <Card>
-              <CardHeader>
-                <CardTitle>Relatórios</CardTitle>
-                <CardDescription>Visualize estatísticas e relatórios detalhados</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Funcionalidade de relatórios em desenvolvimento.
-                </p>
-              </CardContent>
-            </Card>
+            <Reports />
           </TabsContent>
 
           <TabsContent value="logs">
